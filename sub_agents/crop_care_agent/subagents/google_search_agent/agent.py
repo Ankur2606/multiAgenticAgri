@@ -1,5 +1,15 @@
-from google.adk.agents import Agent
-from google.adk.tools import google_search
+# Import mock Google ADK for development/testing
+try:
+    from google.adk.agents import Agent
+    from google.adk.tools import google_search
+except ImportError:
+    print("Google ADK not found, using mock implementation...")
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+    import mock_google_adk
+    from google.adk.agents import Agent
+    from google.adk.tools import google_search
 
 google_search_agent = Agent(
     name="google_search_agent",

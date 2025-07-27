@@ -1,4 +1,11 @@
-from google.adk.agents import Agent
+# Import mock Google ADK for development/testing
+try:
+    from google.adk.agents import Agent
+except ImportError:
+    print("Google ADK not found, using mock implementation...")
+    import mock_google_adk
+    from google.adk.agents import Agent
+
 from sub_agents.crop_care_agent.agent import crop_care_agent
 from sub_agents.crop_advisory_agent.agent import crop_advisory_agent
 # from sub_agents.market_intelligence_agent.agent import market_intelligence_agent

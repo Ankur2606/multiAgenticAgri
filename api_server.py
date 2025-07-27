@@ -8,8 +8,17 @@ import uuid
 # Import the main customer service agent
 from agent import root_agent
 from dotenv import load_dotenv
-from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService
+
+# Import mock Google ADK for development/testing
+try:
+    from google.adk.runners import Runner
+    from google.adk.sessions import DatabaseSessionService
+except ImportError:
+    print("Google ADK not found, using mock implementation...")
+    import mock_google_adk
+    from google.adk.runners import Runner
+    from google.adk.sessions import DatabaseSessionService
+
 from utils import add_user_query_to_history, call_agent_async, get_most_recent_session_id
 
 load_dotenv()
@@ -30,9 +39,9 @@ session_service = DatabaseSessionService(db_url=db_url)
 class InitialStateSchema(BaseModel):
     """Schema for initial session state based on your agricultural context"""
     user_name: str = Field(..., min_length=1, max_length=100, description="User's name")
-    weather: str = Field(..., description="Current weather condition")
+    # weather: str = Field(..., description="Current weather condition")
     weather_disc: str = Field(..., description="Detailed weather description")
-    precipitation: str = Field(..., description="Precipitation in mm format (e.g., '8mm')")
+    # precipitation: str = Field(..., description="Precipitation in mm format (e.g., '8mm')")
     humidity: str = Field(..., description="Humidity percentage (e.g., '8%')")
     windspeed: str = Field(..., description="Wind speed in km/h format (e.g., '24km/h')")
     location: str = Field(..., min_length=1, max_length=100, description="Location name")

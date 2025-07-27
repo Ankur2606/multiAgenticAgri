@@ -1,6 +1,6 @@
 def firebase_disease_search(symptoms, crop, crop_part, location):
     """
-    Stub for Firebase disease search. Replace with actual Firebase query logic.
+    Mock Firebase disease search with comprehensive disease database.
     Args:
         symptoms (str): Visual symptoms described or detected
         crop (str): Crop name
@@ -9,26 +9,152 @@ def firebase_disease_search(symptoms, crop, crop_part, location):
     Returns:
         dict: Matching disease info or None
     """
-    # TODO: Implement actual Firebase query logic here
-    return{
-    "disease_001": {
-    "name": "Yellow Rust",
-    "crop": "Wheat",
-    "symptoms": [
-      {
-        "description": "Yellow powdery pustules forming linear stripes on leaves under cool, humid conditions.",
-        "visual_indicators": ["yellow stripes", "pustules"],
-        "affected_parts": ["leaves"]
-      }
-    ],
-    "treatment": {
-      "method": "Apply fungicides like captan and hexaconazole early at disease onset.",
-      "cost_estimate_USD": 11
-    },
-    "prevention": "Plant resistant wheat varieties and avoid late sowing.",
-    "embedding_text": "Yellow Rust in wheat causes yellow stripes on leaves; managed with fungicides and resistant cultivars."
+    # Mock comprehensive disease database
+    disease_database = {
+        "wheat": {
+            "yellow_rust": {
+                "name": "Yellow Rust (Puccinia striiformis)",
+                "crop": "Wheat",
+                "symptoms": [
+                    {
+                        "description": "Yellow powdery pustules forming linear stripes on leaves under cool, humid conditions.",
+                        "visual_indicators": ["yellow stripes", "pustules", "powdery coating"],
+                        "affected_parts": ["leaves", "stems"]
+                    }
+                ],
+                "treatment": {
+                    "method": "Apply fungicides like captan and hexaconazole early at disease onset. Spray during cool morning hours.",
+                    "cost_estimate_USD": 11,
+                    "organic_treatment": "Neem oil spray, increase plant spacing for better air circulation"
+                },
+                "prevention": "Plant resistant wheat varieties like HD-2967, avoid late sowing, maintain proper drainage.",
+                "confidence_score": 0.92,
+                "location_relevance": {"Punjab": 0.95, "Haryana": 0.90, "UP": 0.85}
+            },
+            "leaf_blight": {
+                "name": "Leaf Blight (Bipolaris sorokiniana)",
+                "crop": "Wheat",
+                "symptoms": [
+                    {
+                        "description": "Brown spots with dark borders on leaves, eventually leading to leaf drying.",
+                        "visual_indicators": ["brown spots", "dark borders", "leaf drying"],
+                        "affected_parts": ["leaves"]
+                    }
+                ],
+                "treatment": {
+                    "method": "Apply fungicides like propiconazole or tebuconazole at early stage.",
+                    "cost_estimate_USD": 15,
+                    "organic_treatment": "Copper sulfate spray, remove infected plant debris"
+                },
+                "prevention": "Crop rotation, seed treatment, avoid excessive nitrogen fertilization.",
+                "confidence_score": 0.88,
+                "location_relevance": {"Maharashtra": 0.95, "Karnataka": 0.90, "AP": 0.85}
+            }
+        },
+        "rice": {
+            "blast": {
+                "name": "Rice Blast (Magnaporthe oryzae)",
+                "crop": "Rice",
+                "symptoms": [
+                    {
+                        "description": "Diamond-shaped lesions with gray centers and brown borders on leaves.",
+                        "visual_indicators": ["diamond lesions", "gray centers", "brown borders"],
+                        "affected_parts": ["leaves", "neck", "panicle"]
+                    }
+                ],
+                "treatment": {
+                    "method": "Apply tricyclazole or carbendazim fungicides. Ensure proper drainage.",
+                    "cost_estimate_USD": 18,
+                    "organic_treatment": "Pseudomonas fluorescens application, silicon fertilization"
+                },
+                "prevention": "Use resistant varieties, balanced fertilization, avoid dense planting.",
+                "confidence_score": 0.90,
+                "location_relevance": {"West Bengal": 0.95, "Punjab": 0.85, "Tamil Nadu": 0.90}
+            }
+        },
+        "cotton": {
+            "bollworm": {
+                "name": "Cotton Bollworm (Helicoverpa armigera)",
+                "crop": "Cotton",
+                "symptoms": [
+                    {
+                        "description": "Small holes in bolls, larvae feeding inside, premature boll drop.",
+                        "visual_indicators": ["holes in bolls", "larvae", "boll drop", "frass"],
+                        "affected_parts": ["bolls", "flowers", "leaves"]
+                    }
+                ],
+                "treatment": {
+                    "method": "Apply cypermethrin or chlorpyrifos insecticides. Use pheromone traps.",
+                    "cost_estimate_USD": 20,
+                    "organic_treatment": "Bt spray, release Trichogramma parasites, neem oil application"
+                },
+                "prevention": "Plant Bt cotton varieties, intercropping with marigold, regular monitoring.",
+                "confidence_score": 0.95,
+                "location_relevance": {"Gujarat": 0.95, "Maharashtra": 0.92, "Andhra Pradesh": 0.90}
+            }
+        }
     }
-}
+    
+    # Simple matching logic based on symptoms and crop
+    crop_lower = crop.lower() if crop else ""
+    symptoms_lower = symptoms.lower() if symptoms else ""
+    
+    # Search for matching diseases
+    matches = []
+    if crop_lower in disease_database:
+        for disease_key, disease_data in disease_database[crop_lower].items():
+            # Check if symptoms match
+            symptom_match = False
+            for symptom in disease_data["symptoms"]:
+                for indicator in symptom["visual_indicators"]:
+                    if indicator.lower() in symptoms_lower:
+                        symptom_match = True
+                        break
+                if symptom_match:
+                    break
+            
+            if symptom_match:
+                # Adjust confidence based on location if provided
+                confidence = disease_data["confidence_score"]
+                if location and location in disease_data["location_relevance"]:
+                    confidence *= disease_data["location_relevance"][location]
+                
+                disease_data["final_confidence"] = confidence
+                matches.append({disease_key: disease_data})
+    
+    # Return best match or mock default
+    if matches:
+        # Sort by confidence and return best match
+        best_match = max(matches, key=lambda x: list(x.values())[0]["final_confidence"])
+        return {
+            "status": "success",
+            "matches_found": len(matches),
+            "best_match": best_match,
+            "search_query": {
+                "symptoms": symptoms,
+                "crop": crop,
+                "crop_part": crop_part,
+                "location": location
+            }
+        }
+    else:
+        # Return a generic response when no specific match found
+        return {
+            "status": "no_match",
+            "message": f"No specific disease found for {crop} with symptoms: {symptoms}",
+            "general_recommendations": [
+                "Consult local agricultural extension officer",
+                "Take clear photos of affected parts for better diagnosis",
+                "Check for common diseases in your region",
+                "Ensure proper crop care practices"
+            ],
+            "search_query": {
+                "symptoms": symptoms,
+                "crop": crop,
+                "crop_part": crop_part,
+                "location": location
+            }
+        }
 
 def analyze_soil_parameters(soil_data, crop_requirements):
     """

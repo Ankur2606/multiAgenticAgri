@@ -1,4 +1,14 @@
-from google.adk.agents import Agent
+# Import mock Google ADK for development/testing
+try:
+    from google.adk.agents import Agent
+except ImportError:
+    print("Google ADK not found, using mock implementation...")
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+    import mock_google_adk
+    from google.adk.agents import Agent
+
 from tools.crop_tools import match_climate_requirements
 
 climate_matcher_agent = Agent(
