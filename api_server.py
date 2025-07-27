@@ -40,7 +40,7 @@ class InitialStateSchema(BaseModel):
     """Schema for initial session state based on your agricultural context"""
     user_name: str = Field(..., min_length=1, max_length=100, description="User's name")
     # weather: str = Field(..., description="Current weather condition")
-    weather: str = Field(..., description="Current weather condition"")
+    weather: str = Field(..., description="Current weather condition")
     # precipitation: str = Field(..., description="Precipitation in mm format (e.g., '8mm')")
     humidity: str = Field(..., description="Humidity percentage (e.g., '8%')")
     windspeed: str = Field(..., description="Wind speed in km/h format (e.g., '24km/h')")
