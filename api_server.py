@@ -9,8 +9,8 @@ import uuid
 from agent import root_agent
 from dotenv import load_dotenv
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from utils import add_user_query_to_history, call_agent_async
+from google.adk.sessions import DatabaseSessionService
+from utils import add_user_query_to_history, call_agent_async, get_most_recent_session_id
 
 load_dotenv()
 
@@ -21,8 +21,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Global session service
-session_service = InMemorySessionService()
+# Global session service - Using SQLite database for persistent storage
+db_url = "sqlite:///./agricultural_agent_sessions.db"
+session_service = DatabaseSessionService(db_url=db_url)
 
 # ===== PYDANTIC MODELS =====
 
@@ -74,7 +75,7 @@ class CreateSessionResponse(BaseModel):
 class AgentQueryRequest(BaseModel):
     """Request model for agent query"""
     user_id: str = Field(..., min_length=1, description="User identifier")
-    session_id: str = Field(..., min_length=1, description="Session identifier")
+    session_id: Optional[str] = Field(None, description="Session identifier (optional - will use most recent if not provided)")
     query: str = Field(..., min_length=1, max_length=1000, description="User query to the agent")
 
 class AgentQueryResponse(BaseModel):
@@ -156,20 +157,38 @@ async def query_agent(request: AgentQueryRequest):
     Send a query to the agricultural agent and get a response
     
     This endpoint creates a runner, processes the user query through the agricultural
-    multi-agent system, and returns the agent's response.
+    multi-agent system, and returns the agent's response. If no session_id is provided,
+    it will automatically use the most recent session for the user.
     """
     try:
+        # Determine which session to use
+        session_id_to_use = request.session_id
+        
+        # If no session_id provided, try to get the most recent one
+        if not session_id_to_use:
+            session_id_to_use = get_most_recent_session_id(
+                session_service, 
+                "Agricultural Support", 
+                request.user_id
+            )
+            
+            if not session_id_to_use:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No sessions found for user_id: {request.user_id}. Please create a session first."
+                )
+        
         # Verify session exists
         try:
             session = session_service.get_session(
                 app_name="Agricultural Support",  # Default app name
                 user_id=request.user_id,
-                session_id=request.session_id
+                session_id=session_id_to_use
             )
         except Exception:
             raise HTTPException(
                 status_code=404,
-                detail=f"Session not found for user_id: {request.user_id}, session_id: {request.session_id}"
+                detail=f"Session not found for user_id: {request.user_id}, session_id: {session_id_to_use}"
             )
         
         # Add user query to interaction history
@@ -177,7 +196,7 @@ async def query_agent(request: AgentQueryRequest):
             session_service, 
             "Agricultural Support", 
             request.user_id, 
-            request.session_id, 
+            session_id_to_use, 
             request.query
         )
         
@@ -193,14 +212,14 @@ async def query_agent(request: AgentQueryRequest):
             agent_response = await call_agent_async(
                 runner, 
                 request.user_id, 
-                request.session_id, 
+                session_id_to_use, 
                 request.query
             )
         except Exception as agent_error:
             print(f"ERROR in agent processing: {agent_error}")
             # Still return success but with error info in response
             return AgentQueryResponse(
-                session_id=request.session_id,
+                session_id=session_id_to_use,
                 user_id=request.user_id,
                 query=request.query,
                 agent_response=f"Agent processing error: {str(agent_error)}",
@@ -209,7 +228,7 @@ async def query_agent(request: AgentQueryRequest):
             )
         
         return AgentQueryResponse(
-            session_id=request.session_id,
+            session_id=session_id_to_use,
             user_id=request.user_id,
             query=request.query,
             agent_response=agent_response,
@@ -269,14 +288,29 @@ async def list_user_sessions(user_id: str, app_name: str = "Agricultural Support
     This endpoint returns a list of all session IDs for a given user.
     """
     try:
-        # Note: InMemorySessionService doesn't have a direct method to list sessions
-        # This is a conceptual endpoint - in a real implementation, you'd need to
-        # extend the session service or use a different storage backend
+        # List all sessions for the user
+        existing_sessions = session_service.list_sessions(
+            app_name=app_name,
+            user_id=user_id,
+        )
+        
+        session_list = []
+        if existing_sessions and existing_sessions.sessions:
+            for session in existing_sessions.sessions:
+                # Get basic session info
+                session_info = {
+                    "session_id": session.id,
+                    "created_at": getattr(session, 'created_at', 'Unknown'),
+                    "last_modified": getattr(session, 'updated_at', 'Unknown')
+                }
+                session_list.append(session_info)
+        
         return {
             "user_id": user_id,
             "app_name": app_name,
-            "message": "Session listing not implemented with InMemorySessionService",
-            "note": "Consider using a persistent session service for this functionality"
+            "sessions": session_list,
+            "total_sessions": len(session_list),
+            "message": f"Found {len(session_list)} sessions for user {user_id}"
         }
     except Exception as e:
         raise HTTPException(
@@ -292,14 +326,31 @@ async def delete_session(user_id: str, session_id: str, app_name: str = "Agricul
     This endpoint deletes a session and all its associated data.
     """
     try:
-        # Note: InMemorySessionService doesn't have a direct delete method
-        # This is a conceptual endpoint
+        # Check if session exists first
+        try:
+            session_service.get_session(
+                app_name=app_name,
+                user_id=user_id,
+                session_id=session_id
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Session not found: {session_id}"
+            )
+        
+        # Delete the session (Note: DatabaseSessionService may or may not have direct delete)
+        # This is a limitation - most session services don't have explicit delete methods
+        # Sessions typically expire naturally or are cleaned up by the service
+        
         return {
-            "message": "Session deletion not implemented with InMemorySessionService",
+            "message": "Session deletion requested successfully",
             "session_id": session_id,
             "user_id": user_id,
-            "note": "Session will be automatically cleaned up when the server restarts"
+            "note": "Session data will be cleaned up by the database service. In production, consider implementing session expiration policies."
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,

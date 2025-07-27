@@ -104,6 +104,38 @@ def add_agent_response_to_history(
     )
 
 
+def get_most_recent_session_id(session_service, app_name, user_id):
+    """Get the most recent session ID for a user.
+    
+    Args:
+        session_service: The session service instance
+        app_name: The application name
+        user_id: The user ID
+        
+    Returns:
+        str: The most recent session ID, or None if no sessions exist
+    """
+    try:
+        # Try to use list_sessions if available (for DatabaseSessionService)
+        if hasattr(session_service, 'list_sessions'):
+            existing_sessions = session_service.list_sessions(
+                app_name=app_name,
+                user_id=user_id,
+            )
+            if existing_sessions and len(existing_sessions.sessions) > 0:
+                return existing_sessions.sessions[0].id
+        else:
+            # For InMemorySessionService, we'll need to track sessions differently
+            # This is a limitation of InMemorySessionService - it doesn't have list_sessions
+            print(f"Warning: {type(session_service).__name__} doesn't support listing sessions")
+            return None
+    except Exception as e:
+        print(f"Error getting most recent session: {e}")
+        return None
+    
+    return None
+
+
 # def display_state(
 #     session_service, app_name, user_id, session_id, label="Current State"
 # ):
