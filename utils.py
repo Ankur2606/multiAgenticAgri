@@ -1,25 +1,6 @@
 from datetime import datetime
 
-# Import mock Google GenAI for development/testing
-try:
-    from google.genai import types
-except ImportError:
-    print("Google GenAI not found, using mock implementation...")
-    # Mock types for development
-    class MockPart:
-        def __init__(self, text):
-            self.text = text
-    
-    class MockContent:
-        def __init__(self, role, parts):
-            self.role = role
-            self.parts = parts
-    
-    class MockTypes:
-        Part = MockPart
-        Content = MockContent
-    
-    types = MockTypes()
+from google.genai import types
 
 
 # ANSI color codes for terminal output
